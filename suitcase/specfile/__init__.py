@@ -3,6 +3,8 @@
 for the spec file format.
 """
 import event_model
+from datetime import datetime
+import os
 from pathlib import Path
 import suitcase.utils
 from ._version import get_versions
@@ -87,7 +89,7 @@ def to_spec_file_header(start, filepath, baseline_descriptor=None):
     if baseline_descriptor is None:
         baseline_descriptor = _DEFAULT_POSITIONERS
     md = {}
-    md['owner'] = start['owner']
+    md['owner'] = start.get('owner', '')
     md['positioner_variable_names'] = sorted(
             list(baseline_descriptor['data_keys'].keys()))
     md['positioner_variable_sources'] = [
@@ -452,17 +454,20 @@ class Serializer(event_model.DocumentRouter):
         """
         Stash the start document and reset the internal state
         """
-        self._file = self._manager.open(f'{file_prefix}.spec')
+        try:
+            self._file = self._manager.open(
+                'stream_data', f'{self._file_prefix}.spec', 'x')
+            self._write_new_header()
+        except (suitcase.utils.ModeError, FileExistsError):
+            self._file = self._manager.open(
+                'stream_data', f'{self._file_prefix}.spec', 'a')
         self._start = doc
 
     def _write_new_header(self):
-        if not os.path.exists(self.specpath):
-            header = to_spec_file_header(self._start, self.specpath,
-                                         self._baseline_descriptor)
-            with open(self.specpath, 'w') as f:
-                f.write(header)
-        # for now assume we don't need to write a new header.  Will revisit
-        # when someone wants to be able to do this.
+        filepath, = self._manager.artifacts
+        header = to_spec_file_header(self._start, filepath,
+                                        self._baseline_descriptor)
+        self._file.write(header)
 
     def descriptor(self, doc):
         if doc.get('name') == 'baseline':
@@ -474,7 +479,7 @@ class Serializer(event_model.DocumentRouter):
             # another one?
             err_msg = (
                 "The suitcase.specfile.Serializer is not designed to handle more "
-                "than one event stream.  If you need this functionality, please "
+                "than one descriptor.  If you need this functionality, please "
                 "request it at https://github.com/NSLS-II/suitcase/issues. "
                 "Until that time, this DocumentToSpec callback will raise a "
                 "NotImplementedError if you try to use it with two event "
@@ -499,8 +504,7 @@ class Serializer(event_model.DocumentRouter):
             scan_header = to_spec_scan_header(self._start,
                                               self._primary_descriptor,
                                               self._baseline_event)
-            with open(self.specpath, 'a') as f:
-                f.write(scan_header)
+            self._file.write(scan_header)
             self._has_not_written_scan_header = False
 
         if doc['descriptor'] != self._primary_descriptor['uid']:
@@ -516,13 +520,11 @@ class Serializer(event_model.DocumentRouter):
         # now write the scan data line
         scan_data_line = to_spec_scan_data(self._start,
                                            self._primary_descriptor, doc)
-        with open(self.specpath, 'a') as f:
-            f.write(scan_data_line + '\n')
+        self._file.write(scan_data_line + '\n')
 
     def stop(self, doc):
         msg = '\n'
         if doc['exit_status'] != 'success':
             msg += ('#C Run exited with status: {exit_status}. Reason: '
                     '{reason}'.format(**doc))
-        with open(self.specpath, 'a') as f:
-            f.write(msg)
+        self._file.write(msg)
