@@ -1,0 +1,4 @@
+[run]
+branch = true
+include = suitcase/specfile/*
+omit = suitcase/specfile/_version.py
