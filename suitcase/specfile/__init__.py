@@ -57,12 +57,7 @@ _SPEC_FILE_HEADER_TEMPLATE = env.from_string("""#F {{ filename }}
 #o0 {{ positioner_variable_names | join(' ') }}""")
 
 
-_DEFAULT_POSITIONERS = {
-    'data_keys':
-        {'Science':
-             {'dtype': 'number', 'shape': [], 'source': 'SOME:RANDOM:PV'},
-         'Data':
-             {'dtype': 'number', 'shape': [], 'source': 'SOME:OTHER:PV'}}}
+_DEFAULT_POSITIONERS = {'data_keys': {}}
 
 
 def to_spec_file_header(start, filepath, baseline_descriptor=None):
@@ -459,9 +454,9 @@ class Serializer(event_model.DocumentRouter):
         try:
             self._file = self._manager.open(
                 'stream_data', f'{self._file_prefix}.spec', 'x')
-            self._write_new_header()
         except FileExistsError:
             try:
+                self._has_not_written_scan_header = False
                 self._file = self._manager.open(
                     'stream_data', f'{self._file_prefix}.spec', 'a')
             except suitcase.utils.ModeError as error:
@@ -471,7 +466,7 @@ class Serializer(event_model.DocumentRouter):
                     "append-mode writing.") from error
 
     def _write_new_header(self):
-        filepath, = self._manager.artifacts
+        filepath, = self._manager.artifacts['stream_data']
         header = to_spec_file_header(self._start, filepath,
                                         self._baseline_descriptor)
         self._file.write(header)

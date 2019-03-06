@@ -9,5 +9,5 @@ recursive-include docs *.rst conf.py Makefile make.bat
 include versioneer.py
 include suitcase/specfile/_version.py
 
-# If including data files in the package, add them like:
-# include path/to/data_file
+include suitcase/specfile/tests/data_from_suitcase_v0.7.0/*
+include suitcase/specfile/tests/documents/*

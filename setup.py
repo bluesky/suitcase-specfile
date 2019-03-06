@@ -47,11 +47,11 @@ setup(
     include_package_data=True,
     package_data={
         'suitcase.specfile': [
-            # When adding files here, remember to update MANIFEST.in as well,
-            # or else they will not be included in the distribution on PyPI!
-            # 'path/to/data_file',
+            'tests/data_from_suitcase_v0.7.0',
+            'tests/documents',
             ]
         },
+    zipsafe=False,
     install_requires=requirements,
     license="BSD (3-clause)",
     classifiers=[
