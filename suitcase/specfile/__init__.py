@@ -408,8 +408,9 @@ class Serializer(event_model.DocumentRouter):
         if isinstance(directory, (str, Path)):
             # The user has given us a filepath; they want files.
             # Set up a MultiFileManager for them.
-            self._manager = suitcase.utils.MultiFileManager(directory,
-                                                            allowed_modes=('a',))
+            self._manager = suitcase.utils.MultiFileManager(
+                directory,
+                allowed_modes=('x', 'a'))
         else:
             # The user has given us their own Manager instance. Use that.
             self._manager = directory
@@ -454,14 +455,20 @@ class Serializer(event_model.DocumentRouter):
         """
         Stash the start document and reset the internal state
         """
+        self._start = doc
         try:
             self._file = self._manager.open(
                 'stream_data', f'{self._file_prefix}.spec', 'x')
             self._write_new_header()
-        except (suitcase.utils.ModeError, FileExistsError):
-            self._file = self._manager.open(
-                'stream_data', f'{self._file_prefix}.spec', 'a')
-        self._start = doc
+        except FileExistsError:
+            try:
+                self._file = self._manager.open(
+                    'stream_data', f'{self._file_prefix}.spec', 'a')
+            except suitcase.utils.ModeError as error:
+                raise ValueError(
+                    "To write data from multiple runs into the same specfile, "
+                    "the Serializer requires a manager that supports "
+                    "append-mode writing.") from error
 
     def _write_new_header(self):
         filepath, = self._manager.artifacts
