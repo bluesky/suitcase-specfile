@@ -6,6 +6,7 @@ import event_model
 from datetime import datetime
 import os
 from pathlib import Path
+import jinja2
 import suitcase.utils
 from ._version import get_versions
 
@@ -14,11 +15,12 @@ del get_versions
 
 
 # TODO Just use f-string?
-import jinja2
 env = jinja2.Environment()
 
 
 SPEC_TIME_FORMAT = '%a %b %d %H:%M:%S %Y'
+
+
 def from_spec_time(string_time):
     """Convert the spec time in line #D to a Python datetime object
 
@@ -96,13 +98,15 @@ def to_spec_file_header(start, filepath, baseline_descriptor=None):
     return _SPEC_FILE_HEADER_TEMPLATE.render(md)
 
 
-_SPEC_1D_COMMAND_TEMPLATE = env.from_string("{{ plan_name }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ time }}")
+_SPEC_1D_COMMAND_TEMPLATE = env.from_string(
+    "{{ plan_name }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ time }}")
 
 _SCANS_WITHOUT_MOTORS = {'ct': 'count'}
 _SCANS_WITH_MOTORS = {'ascan': 'scan', 'dscan': 'rel_scan'}
 _SPEC_SCAN_NAMES = _SCANS_WITHOUT_MOTORS.copy()
 _SPEC_SCAN_NAMES.update(_SCANS_WITH_MOTORS)
-_BLUESKY_PLAN_NAMES = {v:k for k,v in _SPEC_SCAN_NAMES.items()}
+_BLUESKY_PLAN_NAMES = {v: k for k, v in _SPEC_SCAN_NAMES.items()}
+
 
 def get_name(plan_name):
     return _BLUESKY_PLAN_NAMES.get(plan_name, 'Other')
@@ -241,7 +245,6 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
     return _SPEC_SCAN_HEADER_TEMPLATE.render(md)
 
 
-
 _SPEC_EVENT_TEMPLATE = env.from_string("""
 {{ motor_position }}  {{ unix_time }} {{ acq_time }} {{ values | join(' ') }}""")
 
@@ -254,7 +257,6 @@ def to_spec_scan_data(start, primary_descriptor, event):
     data_keys = _get_scan_data_column_names(start, primary_descriptor)
     md['values'] = [event['data'][k] for k in data_keys]
     return _SPEC_EVENT_TEMPLATE.render(md)
-
 
 
 # Dictionary that maps a spec metadata line to a specific lambda function
@@ -468,7 +470,7 @@ class Serializer(event_model.DocumentRouter):
     def _write_new_header(self):
         filepath, = self._manager.artifacts['stream_data']
         header = to_spec_file_header(self._start, filepath,
-                                        self._baseline_descriptor)
+                                     self._baseline_descriptor)
         self._file.write(header)
 
     def descriptor(self, doc):
@@ -492,7 +494,7 @@ class Serializer(event_model.DocumentRouter):
 
     def event(self, doc):
         if (self._baseline_descriptor and
-                    doc['descriptor'] == self._baseline_descriptor['uid']):
+                doc['descriptor'] == self._baseline_descriptor['uid']):
             self._num_baseline_events_received += 1
             self._baseline_event = doc
             return
