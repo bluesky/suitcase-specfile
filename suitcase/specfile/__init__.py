@@ -332,7 +332,7 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
 
     >>> export(gen, '', '{plan_name}-{motors}-')
 
-    Include the experiment's start time formatted as YY-MM-DD_HH-MM.
+    Include the experiment's start time formatted as YYYY-MM-DD_HH-MM.
 
     >>> export(gen, '', '{time:%Y-%m-%d_%H:%M}-')
 
