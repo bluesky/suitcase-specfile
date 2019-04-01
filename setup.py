@@ -37,6 +37,7 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     long_description=readme,
+    long_description_content_type='text/markdown',
     packages=['suitcase.specfile',
               'suitcase.specfile.tests'],
     entry_points={
