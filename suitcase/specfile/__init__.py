@@ -277,7 +277,7 @@ spec_line_parser = {
 }
 
 
-def export(gen, directory, file_prefix='{start[uid]}-', **kwargs):
+def export(gen, directory, file_prefix='{start[uid]}', **kwargs):
     """
     Export a stream of documents to a specfile.
 
@@ -307,9 +307,9 @@ def export(gen, directory, file_prefix='{start[uid]}-', **kwargs):
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
         string may include templates as in
-        ``{start[proposal_id]}-{start[sample_name]}-``,
+        ``{start[proposal_id]}-{start[sample_name]}``,
         which are populated from the RunStart document. The default value is
-        ``{start[uid]}-`` which is guaranteed to be present and unique. A more
+        ``{start[uid]}`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -375,9 +375,9 @@ class Serializer(event_model.DocumentRouter):
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
         string may include templates as in
-        ``{start[proposal_id]}-{start[sample_name]}-``,
+        ``{start[proposal_id]}-{start[sample_name]}``,
         which are populated from the RunStart document. The default value is
-        ``{start[uid]}-`` which is guaranteed to be present and unique. A more
+        ``{start[uid]}`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
