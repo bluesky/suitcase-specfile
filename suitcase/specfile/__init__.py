@@ -277,7 +277,7 @@ spec_line_parser = {
 }
 
 
-def export(gen, directory, file_prefix='{uid}-', **kwargs):
+def export(gen, directory, file_prefix='{start[uid]}-', **kwargs):
     """
     Export a stream of documents to a specfile.
 
@@ -306,9 +306,10 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
-        string may include templates as in ``{proposal_id}-{sample_name}-``,
+        string may include templates as in
+        ``{start[proposal_id]}-{start[sample_name]}-``,
         which are populated from the RunStart document. The default value is
-        ``{uid}-`` which is guaranteed to be present and unique. A more
+        ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -330,11 +331,11 @@ def export(gen, directory, file_prefix='{uid}-', **kwargs):
 
     Generate files with more readable metadata in the file names.
 
-    >>> export(gen, '', '{plan_name}-{motors}-')
+    >>> export(gen, '', '{start[plan_name]}-{start[motors]}-')
 
     Include the experiment's start time formatted as YYYY-MM-DD_HH-MM.
 
-    >>> export(gen, '', '{time:%Y-%m-%d_%H:%M}-')
+    >>> export(gen, '', '{start[time]:%Y-%m-%d_%H:%M}-')
 
     Place the files in a different directory, such as on a mounted USB stick.
 
@@ -373,9 +374,10 @@ class Serializer(event_model.DocumentRouter):
 
     file_prefix : str, optional
         The first part of the filename of the generated output files. This
-        string may include templates as in ``{proposal_id}-{sample_name}-``,
+        string may include templates as in
+        ``{start[proposal_id]}-{start[sample_name]}-``,
         which are populated from the RunStart document. The default value is
-        ``{uid}-`` which is guaranteed to be present and unique. A more
+        ``{start[uid]}-`` which is guaranteed to be present and unique. A more
         descriptive value depends on the application and is therefore left to
         the user.
 
@@ -396,7 +398,7 @@ class Serializer(event_model.DocumentRouter):
        callback is undefined.  Please do not use this callback with more than
        one descriptor.
     """
-    def __init__(self, directory, file_prefix='{uid}', **kwargs):
+    def __init__(self, directory, file_prefix='{start[uid]}', **kwargs):
 
         self._file_prefix = file_prefix
         self._kwargs = kwargs
@@ -455,12 +457,14 @@ class Serializer(event_model.DocumentRouter):
         self._start = doc
         try:
             self._file = self._manager.open(
-                'stream_data', f'{self._file_prefix}.spec', 'x')
+                'stream_data',
+                f'{self._file_prefix.format(start=doc)}.spec', 'x')
         except FileExistsError:
             try:
                 self._has_not_written_scan_header = False
                 self._file = self._manager.open(
-                    'stream_data', f'{self._file_prefix}.spec', 'a')
+                    'stream_data',
+                    f'{self._file_prefix.format(start=doc)}.spec', 'a')
             except suitcase.utils.ModeError as error:
                 raise ValueError(
                     "To write data from multiple runs into the same specfile, "
