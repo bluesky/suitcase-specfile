@@ -529,6 +529,7 @@ class Serializer(event_model.DocumentRouter):
         scan_data_line = to_spec_scan_data(self._start,
                                            self._primary_descriptor, doc)
         self._file.write(scan_data_line + '\n')
+        self._file.flush()
 
     def stop(self, doc):
         msg = '\n'
@@ -536,3 +537,4 @@ class Serializer(event_model.DocumentRouter):
             msg += ('#C Run exited with status: {exit_status}. Reason: '
                     '{reason}'.format(**doc))
         self._file.write(msg)
+        self._file.flush()
