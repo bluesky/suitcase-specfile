@@ -277,7 +277,7 @@ spec_line_parser = {
 }
 
 
-def export(gen, directory, file_prefix='{start[uid]}', **kwargs):
+def export(gen, directory, file_prefix='{start[uid]}'):
     """
     Export a stream of documents to a specfile.
 
@@ -313,9 +313,6 @@ def export(gen, directory, file_prefix='{start[uid]}', **kwargs):
         descriptive value depends on the application and is therefore left to
         the user.
 
-    **kwargs : kwargs
-        Keyword arugments to be passed through to the underlying I/O library.
-
     Returns
     -------
     artifacts : dict
@@ -341,7 +338,7 @@ def export(gen, directory, file_prefix='{start[uid]}', **kwargs):
 
     >>> export(gen, '/path/to/my_usb_stick')
     """
-    with Serializer(directory, file_prefix, **kwargs) as serializer:
+    with Serializer(directory, file_prefix) as serializer:
         for item in gen:
             serializer(*item)
 
@@ -386,9 +383,6 @@ class Serializer(event_model.DocumentRouter):
         the full document stream is slower but each document is immediately
         available for reading. False by default.
 
-    **kwargs : kwargs
-        Keyword arugments to be passed through to the underlying I/O library.
-
     Attributes
     ----------
     artifacts
@@ -403,12 +397,10 @@ class Serializer(event_model.DocumentRouter):
        callback is undefined.  Please do not use this callback with more than
        one descriptor.
     """
-    def __init__(self, directory, file_prefix='{start[uid]}', flush=False,
-                 **kwargs):
+    def __init__(self, directory, file_prefix='{start[uid]}', flush=False):
 
         self._file_prefix = file_prefix
         self._flush = flush
-        self._kwargs = kwargs
         self._templated_file_prefix = ''  # set when we get a 'start' document
 
         if isinstance(directory, (str, Path)):
