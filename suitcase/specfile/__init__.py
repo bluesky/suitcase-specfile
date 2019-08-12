@@ -381,6 +381,11 @@ class Serializer(event_model.DocumentRouter):
         descriptive value depends on the application and is therefore left to
         the user.
 
+    flush : boolean
+        Flush the file to disk after each document. As a consequence, writing
+        the full document stream is slower but each document is immediately
+        available for reading. False by default.
+
     **kwargs : kwargs
         Keyword arugments to be passed through to the underlying I/O library.
 
@@ -398,9 +403,11 @@ class Serializer(event_model.DocumentRouter):
        callback is undefined.  Please do not use this callback with more than
        one descriptor.
     """
-    def __init__(self, directory, file_prefix='{start[uid]}', **kwargs):
+    def __init__(self, directory, file_prefix='{start[uid]}', flush=False,
+                 **kwargs):
 
         self._file_prefix = file_prefix
+        self._flush = flush
         self._kwargs = kwargs
         self._templated_file_prefix = ''  # set when we get a 'start' document
 
@@ -529,7 +536,8 @@ class Serializer(event_model.DocumentRouter):
         scan_data_line = to_spec_scan_data(self._start,
                                            self._primary_descriptor, doc)
         self._file.write(scan_data_line + '\n')
-        self._file.flush()
+        if self._flush:
+            self._file.flush()
 
     def stop(self, doc):
         msg = '\n'
@@ -537,4 +545,5 @@ class Serializer(event_model.DocumentRouter):
             msg += ('#C Run exited with status: {exit_status}. Reason: '
                     '{reason}'.format(**doc))
         self._file.write(msg)
-        self._file.flush()
+        if self._flush:
+            self._file.flush()
