@@ -408,7 +408,7 @@ class Serializer(event_model.DocumentRouter):
             # Set up a MultiFileManager for them.
             self._manager = suitcase.utils.MultiFileManager(
                 directory,
-                allowed_modes=('x', 'a'))
+                allowed_modes=('a'))
         else:
             # The user has given us their own Manager instance. Use that.
             self._manager = directory
@@ -454,21 +454,19 @@ class Serializer(event_model.DocumentRouter):
         Stash the start document and reset the internal state
         """
         self._start = doc
+
         try:
             self._file = self._manager.open(
                 'stream_data',
-                f'{self._file_prefix.format(start=doc)}.spec', 'x')
-        except FileExistsError:
-            try:
-                self._has_not_written_scan_header = False
-                self._file = self._manager.open(
-                    'stream_data',
-                    f'{self._file_prefix.format(start=doc)}.spec', 'a')
-            except suitcase.utils.ModeError as error:
-                raise ValueError(
-                    "To write data from multiple runs into the same specfile, "
-                    "the Serializer requires a manager that supports "
-                    "append-mode writing.") from error
+                f'{self._file_prefix.format(start=doc)}.spec', 'a')
+        except suitcase.utils.ModeError as error:
+            raise ValueError(
+                "To write data from multiple runs into the same specfile, "
+                "the Serializer requires a manager that supports append ('a') "
+                "mode.") from error
+        # Use tell() to sort out if this file is empty (i.e. a new file) and
+        # therefore whether we need to write the specfile header or not.
+        self._has_not_written_scan_header = not self._file.tell()
 
     def _write_new_header(self):
         filepath, = self._manager.artifacts['stream_data']
