@@ -61,7 +61,7 @@ def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
         this will run multiple tests each with a range of file_prefixes,
         detectors and event_types. See `suitcase.utils.conftest` for more info.
     '''
-    collector = example_data(ignore=[one_stream_multi_descriptors_plan])
+    collector = example_data(skip_tests_with=[one_stream_multi_descriptors_plan])
     file_prefix = file_prefix_list()
     artifacts = export(collector, tmp_path, file_prefix=file_prefix)
 
