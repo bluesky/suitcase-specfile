@@ -277,7 +277,7 @@ spec_line_parser = {
 }
 
 
-def export(gen, directory, file_prefix='{start[uid]}', **kwargs):
+def export(gen, directory, file_prefix='{start[uid]}'):
     """
     Export a stream of documents to a specfile.
 
@@ -313,9 +313,6 @@ def export(gen, directory, file_prefix='{start[uid]}', **kwargs):
         descriptive value depends on the application and is therefore left to
         the user.
 
-    **kwargs : kwargs
-        Keyword arugments to be passed through to the underlying I/O library.
-
     Returns
     -------
     artifacts : dict
@@ -341,7 +338,7 @@ def export(gen, directory, file_prefix='{start[uid]}', **kwargs):
 
     >>> export(gen, '/path/to/my_usb_stick')
     """
-    with Serializer(directory, file_prefix, **kwargs) as serializer:
+    with Serializer(directory, file_prefix) as serializer:
         for item in gen:
             serializer(*item)
 
@@ -381,8 +378,10 @@ class Serializer(event_model.DocumentRouter):
         descriptive value depends on the application and is therefore left to
         the user.
 
-    **kwargs : kwargs
-        Keyword arugments to be passed through to the underlying I/O library.
+    flush : boolean
+        Flush the file to disk after each document. As a consequence, writing
+        the full document stream is slower but each document is immediately
+        available for reading. False by default.
 
     Attributes
     ----------
@@ -398,10 +397,10 @@ class Serializer(event_model.DocumentRouter):
        callback is undefined.  Please do not use this callback with more than
        one descriptor.
     """
-    def __init__(self, directory, file_prefix='{start[uid]}', **kwargs):
+    def __init__(self, directory, file_prefix='{start[uid]}', flush=False):
 
         self._file_prefix = file_prefix
-        self._kwargs = kwargs
+        self._flush = flush
         self._templated_file_prefix = ''  # set when we get a 'start' document
 
         if isinstance(directory, (str, Path)):
@@ -409,7 +408,7 @@ class Serializer(event_model.DocumentRouter):
             # Set up a MultiFileManager for them.
             self._manager = suitcase.utils.MultiFileManager(
                 directory,
-                allowed_modes=('x', 'a'))
+                allowed_modes=('a'))
         else:
             # The user has given us their own Manager instance. Use that.
             self._manager = directory
@@ -455,21 +454,19 @@ class Serializer(event_model.DocumentRouter):
         Stash the start document and reset the internal state
         """
         self._start = doc
+
         try:
             self._file = self._manager.open(
                 'stream_data',
-                f'{self._file_prefix.format(start=doc)}.spec', 'x')
-        except FileExistsError:
-            try:
-                self._has_not_written_scan_header = False
-                self._file = self._manager.open(
-                    'stream_data',
-                    f'{self._file_prefix.format(start=doc)}.spec', 'a')
-            except suitcase.utils.ModeError as error:
-                raise ValueError(
-                    "To write data from multiple runs into the same specfile, "
-                    "the Serializer requires a manager that supports "
-                    "append-mode writing.") from error
+                f'{self._file_prefix.format(start=doc)}.spec', 'a')
+        except suitcase.utils.ModeError as error:
+            raise ValueError(
+                "To write data from multiple runs into the same specfile, "
+                "the Serializer requires a manager that supports append ('a') "
+                "mode.") from error
+        # Use tell() to sort out if this file is empty (i.e. a new file) and
+        # therefore whether we need to write the specfile header or not.
+        self._has_not_written_scan_header = not self._file.tell()
 
     def _write_new_header(self):
         filepath, = self._manager.artifacts['stream_data']
@@ -529,6 +526,8 @@ class Serializer(event_model.DocumentRouter):
         scan_data_line = to_spec_scan_data(self._start,
                                            self._primary_descriptor, doc)
         self._file.write(scan_data_line + '\n')
+        if self._flush:
+            self._file.flush()
 
     def stop(self, doc):
         msg = '\n'
@@ -536,3 +535,5 @@ class Serializer(event_model.DocumentRouter):
             msg += ('#C Run exited with status: {exit_status}. Reason: '
                     '{reason}'.format(**doc))
         self._file.write(msg)
+        if self._flush:
+            self._file.flush()
