@@ -1,7 +1,9 @@
 import json
+from pkg_resources import resource_filename
+
+from bluesky.plans import count
 import pytest
 from suitcase.specfile import export, Serializer
-from pkg_resources import resource_filename
 from suitcase.utils.tests.conftest import one_stream_multi_descriptors_plan
 
 
@@ -52,6 +54,21 @@ def test_export(tmp_path, example_data):
         export(documents, tmp_path)
     except NotImplementedError:
         raise pytest.skip()
+
+
+def test_append(tmp_path, RE, hw):
+    "Reuse the same file for two runs."
+    with Serializer(tmp_path, file_prefix='my_file') as serializer1:
+        RE(count([hw.det]), serializer1)
+
+    # This used to raise an error when reserve_name was called twice.
+    # https://github.com/bluesky/suitcase-specfile/issues/7
+    with Serializer(tmp_path, file_prefix='my_file') as serializer2:
+        RE(count([hw.det]), serializer2)
+
+    # Verify that this test is testing what we think it is. The two Serializers
+    # should be handling the same file.
+    assert serializer1.artifacts == serializer2.artifacts
 
 
 def test_file_prefix_formatting(file_prefix_list, example_data, tmp_path):
