@@ -531,6 +531,7 @@ class Serializer(event_model.DocumentRouter):
 
     def stop(self, doc):
         msg = '\n'
+        doc.setdefault('reason', 'No reason recorded.')
         if doc['exit_status'] != 'success':
             msg += ('#C Run exited with status: {exit_status}. Reason: '
                     '{reason}'.format(**doc))
