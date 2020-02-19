@@ -421,6 +421,7 @@ class Serializer(event_model.DocumentRouter):
         self._baseline_event = None
         self._primary_descriptor = None
         self._has_not_written_scan_header = True
+        self._has_not_written_file_header = True
         self._num_events_received = 0
         self._num_baseline_events_received = 0
 
@@ -466,7 +467,7 @@ class Serializer(event_model.DocumentRouter):
                 "mode.") from error
         # Use tell() to sort out if this file is empty (i.e. a new file) and
         # therefore whether we need to write the specfile header or not.
-        self._has_not_written_scan_header = not self._file.tell()
+        self._has_not_written_file_header = not self._file.tell()
 
     def _write_new_header(self):
         filepath, = self._manager.artifacts['stream_data']
@@ -502,9 +503,11 @@ class Serializer(event_model.DocumentRouter):
         # Write the scan header as soon as we get the first event.  If it is
         # not the baseline event, then sorry! You need to give me that before
         # any primary events.
-        if self._has_not_written_scan_header:
-            # maybe write a new header if there is not one already
+        if self._has_not_written_file_header:
+            # maybe write a new file header if there is not one already
             self._write_new_header()
+            self._has_not_written_file_header = False
+        if self._has_not_written_scan_header:
             # write the scan header with whatever information we currently have
             scan_header = to_spec_scan_header(self._start,
                                               self._primary_descriptor,
