@@ -176,7 +176,7 @@ def _get_motor_positions(start, event):
 
     data = ""
     for motor in motor_name:
-        data = data + str((event['data'][motor])) + ' ' 
+        data = data + str((event['data'][motor])) + ' '
     return data
 
 
@@ -228,6 +228,13 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
         motor_and_args = [motor_names, []]
 
     elif scan_command == 'mesh':
+
+        if len(motor_names) > 2:
+
+            raise NotImplementedError(
+             "Your scan has {0} scanning motors. They are {1}. mesh expects 2"
+             .format(len(motor_names), motor_names))
+        return 'seq_num'
 
         for motor in range(len(motor_names)):
 
