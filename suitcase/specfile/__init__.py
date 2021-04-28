@@ -234,7 +234,7 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
             raise NotImplementedError(
              "Your scan has {0} scanning motors. They are {1}. mesh expects 2"
              .format(len(motor_names), motor_names))
-            
+
             return 'seq_num'
 
         for motor in range(len(motor_names)):
