@@ -100,11 +100,9 @@ def to_spec_file_header(start, filepath, baseline_descriptor=None):
 
 _SPEC_1D_COMMAND_TEMPLATE = env.from_string(
     "{{ plan_name }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ time }}")
-_SPEC_2D_COMMAND_TEMPLATE = env.from_string(
-    "{{ plan_name }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ time }}")
 
 _SCANS_WITHOUT_MOTORS = {'ct': 'count'}
-_SCANS_WITH_MOTORS = {'ascan': 'scan', 'dscan': 'rel_scan', 'mesh':'grid_scan'}
+_SCANS_WITH_MOTORS = {'ascan': 'scan', 'dscan': 'rel_scan', 'mesh': 'grid_scan'}
 _SPEC_SCAN_NAMES = _SCANS_WITHOUT_MOTORS.copy()
 _SPEC_SCAN_NAMES.update(_SCANS_WITH_MOTORS)
 _BLUESKY_PLAN_NAMES = {v: k for k, v in _SPEC_SCAN_NAMES.items()}
@@ -152,14 +150,13 @@ def _get_plan_name(start):
     return get_name(plan_name)
 
 
-#returns a list of motor names
-def _get_motor_name(start):
+def _get_motor_names(start):
     plan_name = _get_plan_name(start)
     if (plan_name not in _SPEC_SCAN_NAMES or
             plan_name in _SCANS_WITHOUT_MOTORS):
         return 'seq_num'
     motor_names = start['motors']
-    
+
     return motor_names
 
 
@@ -169,14 +166,14 @@ def _get_motor_position(start, event):
     if (plan_name not in _SPEC_SCAN_NAMES or
             plan_name in _SCANS_WITHOUT_MOTORS):
         return event['seq_num']
-    motor_name = _get_motor_name(start)
+    motor_name = _get_motor_names(start)
     # make sure we have a motor name that we can get data for. Otherwise we use
     # the sequence number of the event
     if motor_name == 'seq_num':
         return event['seq_num']
     # if none of the above conditions are met, we can get a motor value. Thus we
     # return the motor value in the event
-    
+
     data = []
     for motor in motor_name:
         data.append(event['data'][motor])
@@ -184,7 +181,7 @@ def _get_motor_position(start, event):
 
 
 def _get_scan_data_column_names(start, primary_descriptor):
-    motor_name = _get_motor_name(start)
+    motor_name = _get_motor_names(start)
     # List all scalar fields, excluding the motor (x variable).
     read_fields = sorted(
         [k for k, v in primary_descriptor['data_keys'].items()
@@ -221,45 +218,43 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
     md = {}
     md['scan_id'] = start['scan_id']
     scan_command = _get_plan_name(start)
-    motor_names = _get_motor_name(start)
+    motor_names = _get_motor_names(start)
     acq_time = _get_acq_time(start)
-    
-    
+
     motor_and_args = []
     if (scan_command not in _SPEC_SCAN_NAMES or
             scan_command in _SCANS_WITHOUT_MOTORS):
 
-        motor_and_args  = [motor_names, []]
-        
+        motor_and_args = [motor_names, []]
+
     elif scan_command == 'mesh':
-    
+
         for motor in range(len(motor_names)):
-        
-            start_val =start['plan_args']['args'][1+motor*4]
+
+            start_val = start['plan_args']['args'][1+motor*4]
             stop_val = start['plan_args']['args'][2+motor*4]
             num = int(start['plan_args']['args'][3+motor*4])-1
-            
-            motor_and_args = motor_and_args + [motor_names[motor], start_val,stop_val,num]
-    
+
+            motor_and_args = motor_and_args + [motor_names[motor], start_val, stop_val, num]
+
     else:
-        
-        
+
         for motor in range(len(motor_names)):
-        
+
             start_val = start['plan_args']['args'][1+motor*3]
             stop_val = start['plan_args']['args'][2+motor*3]
-                        
-            motor_and_args = motor_and_args + [motor_names[motor], start_val,stop_val]
-        
+
+            motor_and_args = motor_and_args + [motor_names[motor], start_val, stop_val]
+
         motor_and_args.append(start['plan_args']['num'])
-        
-        if len(motor_names)>1:
+
+        if len(motor_names) > 1:
             scan_command = scan_command[0] + str(len(motor_names)) + scan_command[1:]
-            
+
     command_list = ([scan_command] + motor_and_args + [acq_time])
 
     # have to ensure all list elements are strings or join gets angry
-    
+
     md['command'] = ' '.join([str(s) for s in command_list])
     md['readable_time'] = to_spec_time(datetime.fromtimestamp(start['time']))
     md['acq_time'] = acq_time
@@ -267,7 +262,7 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
         v for k, v in sorted(baseline_event['data'].items())]
     md['data_keys'] = _get_scan_data_column_names(start, primary_descriptor)
     md['num_columns'] = 3 + len(md['data_keys'])
-    md['motor_name'] = '  '.join([str(s) for s in _get_motor_name(start)])           #deals with multiple motors, note double space ' '
+    md['motor_name'] = '  '.join([str(s) for s in _get_motor_names(start)])
     return _SPEC_SCAN_HEADER_TEMPLATE.render(md)
 
 
@@ -279,7 +274,7 @@ def to_spec_scan_data(start, primary_descriptor, event):
     md = {}
     md['unix_time'] = int(event['time'])
     md['acq_time'] = _get_acq_time(start)
-    md['motor_position'] = ' '.join([str(s) for s in _get_motor_position(start, event)]) 
+    md['motor_position'] = ' '.join([str(s) for s in _get_motor_position(start, event)])
     data_keys = _get_scan_data_column_names(start, primary_descriptor)
     md['values'] = [event['data'][k] for k in data_keys]
     return _SPEC_EVENT_TEMPLATE.render(md)
