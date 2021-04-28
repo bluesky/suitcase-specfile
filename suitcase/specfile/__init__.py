@@ -100,9 +100,11 @@ def to_spec_file_header(start, filepath, baseline_descriptor=None):
 
 _SPEC_1D_COMMAND_TEMPLATE = env.from_string(
     "{{ plan_name }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ time }}")
+_SPEC_2D_COMMAND_TEMPLATE = env.from_string(
+    "{{ plan_name }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ scan_motor }} {{ start }} {{ stop }} {{ num }} {{ time }}")
 
 _SCANS_WITHOUT_MOTORS = {'ct': 'count'}
-_SCANS_WITH_MOTORS = {'ascan': 'scan', 'dscan': 'rel_scan'}
+_SCANS_WITH_MOTORS = {'ascan': 'scan', 'dscan': 'rel_scan', 'mesh':'grid_scan'}
 _SPEC_SCAN_NAMES = _SCANS_WITHOUT_MOTORS.copy()
 _SPEC_SCAN_NAMES.update(_SCANS_WITH_MOTORS)
 _BLUESKY_PLAN_NAMES = {v: k for k, v in _SPEC_SCAN_NAMES.items()}
@@ -150,23 +152,15 @@ def _get_plan_name(start):
     return get_name(plan_name)
 
 
+#returns a list of motor names
 def _get_motor_name(start):
     plan_name = _get_plan_name(start)
     if (plan_name not in _SPEC_SCAN_NAMES or
             plan_name in _SCANS_WITHOUT_MOTORS):
         return 'seq_num'
-    motor_name = start['motors']
-    # We only support a single scanning motor right now.
-    if len(motor_name) > 1:
-        raise NotImplementedError(
-            "Your scan has {0} scanning motors. They are {1}. Conversion to a"
-            "specfile does not understand what to do with multiple scanning. "
-            "Please request this feature at "
-            "https://github.com/NSLS-II/suitcase/issues Until this feature is "
-            "implemented, we will be using the sequence number as the motor "
-            "position".format(len(motor_name), motor_name))
-        return 'seq_num'
-    return motor_name[0]
+    motor_names = start['motors']
+    
+    return motor_names
 
 
 def _get_motor_position(start, event):
@@ -182,7 +176,11 @@ def _get_motor_position(start, event):
         return event['seq_num']
     # if none of the above conditions are met, we can get a motor value. Thus we
     # return the motor value in the event
-    return event['data'][motor_name]
+    
+    data = []
+    for motor in motor_name:
+        data.append(event['data'][motor])
+    return data
 
 
 def _get_scan_data_column_names(start, primary_descriptor):
@@ -190,7 +188,7 @@ def _get_scan_data_column_names(start, primary_descriptor):
     # List all scalar fields, excluding the motor (x variable).
     read_fields = sorted(
         [k for k, v in primary_descriptor['data_keys'].items()
-         if (v['object_name'] != motor_name and not v['shape'])])
+         if (v['object_name'] not in motor_name and not v['shape'])])
     return read_fields
 
 
@@ -223,26 +221,43 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
     md = {}
     md['scan_id'] = start['scan_id']
     scan_command = _get_plan_name(start)
-    motor_name = _get_motor_name(start)
+    motor_names = _get_motor_name(start)
     acq_time = _get_acq_time(start)
-    # can only grab start/stop/num if we are a dscan or ascan.
+    
+    
+    motor_and_args = []
     if (scan_command not in _SPEC_SCAN_NAMES or
             scan_command in _SCANS_WITHOUT_MOTORS):
-        command_args = []
+        motor_and_args  = [motor_names, []]
+        
+    elif scan_command == 'mesh':
+    
+        for motor in range(len(motor_names)):
+        
+            start_val =start['plan_args']['args'][1+motor*4]
+            stop_val = start['plan_args']['args'][2+motor*4]
+            num = int(start['plan_args']['args'][3+motor*4])-1
+            
+            motor_and_args = motor_and_args + [motor_names[motor], start_val,stop_val,num]
+    
     else:
         
         
-        #command_args = [start['plan_args'][k]
-        #               for k in ('start', 'stop', 'num')]
-        # The scans scan and rel_scan don't contain keys 'start' and 'stop' they are just in a list
-        start_val = start['plan_args']['args'][-2]
-        stop_val = start['plan_args']['args'][-1]
-        num = start['plan_args']['num']
+        for motor in range(len(motor_names)):
         
-        command_args = [start_val,stop_val,num]
+            start_val = start['plan_args']['args'][1+motor*3]
+            stop_val = start['plan_args']['args'][2+motor*3]
+                        
+            motor_and_args = motor_and_args + [motor_names[motor], start_val,stop_val]
         
-    command_list = ([scan_command, motor_name] + command_args + [acq_time])
+        motor_and_args.append(start['plan_args']['num'])
+        
+        if len(motor_names)>1:
+            scan_command = scan_command[0] + str(len(motor_names)) + scan_command[1:]
+            
+    command_list = ([scan_command] + motor_and_args + [acq_time])
     # have to ensure all list elements are strings or join gets angry
+    
     md['command'] = ' '.join([str(s) for s in command_list])
     md['readable_time'] = to_spec_time(datetime.fromtimestamp(start['time']))
     md['acq_time'] = acq_time
@@ -250,7 +265,7 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
         v for k, v in sorted(baseline_event['data'].items())]
     md['data_keys'] = _get_scan_data_column_names(start, primary_descriptor)
     md['num_columns'] = 3 + len(md['data_keys'])
-    md['motor_name'] = _get_motor_name(start)
+    md['motor_name'] = '  '.join([str(s) for s in _get_motor_name(start)])           #deals with multiple motors, note double space ' '
     return _SPEC_SCAN_HEADER_TEMPLATE.render(md)
 
 
@@ -262,7 +277,7 @@ def to_spec_scan_data(start, primary_descriptor, event):
     md = {}
     md['unix_time'] = int(event['time'])
     md['acq_time'] = _get_acq_time(start)
-    md['motor_position'] = _get_motor_position(start, event)
+    md['motor_position'] = ' '.join([str(s) for s in _get_motor_position(start, event)]) 
     data_keys = _get_scan_data_column_names(start, primary_descriptor)
     md['values'] = [event['data'][k] for k in data_keys]
     return _SPEC_EVENT_TEMPLATE.render(md)
