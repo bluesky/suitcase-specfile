@@ -229,18 +229,15 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
     if (scan_command not in _SPEC_SCAN_NAMES or
             scan_command in _SCANS_WITHOUT_MOTORS):
         command_args = []
+
     else:
-        
-        
-        #command_args = [start['plan_args'][k]
-        #               for k in ('start', 'stop', 'num')]
-        # The scans scan and rel_scan don't contain keys 'start' and 'stop' they are just in a list
+
         start_val = start['plan_args']['args'][-2]
         stop_val = start['plan_args']['args'][-1]
         num = start['plan_args']['num']
-        
-        command_args = [start_val,stop_val,num]
-        
+
+        command_args = [start_val, stop_val, num]
+
     command_list = ([scan_command, motor_name] + command_args + [acq_time])
     # have to ensure all list elements are strings or join gets angry
     md['command'] = ' '.join([str(s) for s in command_list])
