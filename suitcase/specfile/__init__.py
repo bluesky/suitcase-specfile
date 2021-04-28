@@ -225,7 +225,7 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
     if (scan_command not in _SPEC_SCAN_NAMES or
             scan_command in _SCANS_WITHOUT_MOTORS):
 
-        motor_and_args = [motor_names, []]
+        motor_and_args = [motor_names]
 
     elif scan_command == 'mesh':
 
@@ -234,7 +234,8 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
             raise NotImplementedError(
              "Your scan has {0} scanning motors. They are {1}. mesh expects 2"
              .format(len(motor_names), motor_names))
-        return 'seq_num'
+            
+            return 'seq_num'
 
         for motor in range(len(motor_names)):
 
@@ -269,7 +270,10 @@ def to_spec_scan_header(start, primary_descriptor, baseline_event=None):
         v for k, v in sorted(baseline_event['data'].items())]
     md['data_keys'] = _get_scan_data_column_names(start, primary_descriptor)
     md['num_columns'] = 3 + len(md['data_keys'])
-    md['motor_name'] = '  '.join([str(s) for s in _get_motor_names(start)])
+    if motor_names == 'seq_num':
+        md['motor_name'] = 'seq_num'
+    else:
+        md['motor_name'] = '  '.join([str(s) for s in motor_names])
     return _SPEC_SCAN_HEADER_TEMPLATE.render(md)
 
 
