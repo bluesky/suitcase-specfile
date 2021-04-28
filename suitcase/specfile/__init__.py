@@ -160,7 +160,7 @@ def _get_motor_names(start):
     return motor_names
 
 
-def _get_motor_position(start, event):
+def _get_motor_positions(start, event):
     plan_name = _get_plan_name(start)
     # make sure we are trying to get the motor position for an implemented scan
     if (plan_name not in _SPEC_SCAN_NAMES or
@@ -174,9 +174,9 @@ def _get_motor_position(start, event):
     # if none of the above conditions are met, we can get a motor value. Thus we
     # return the motor value in the event
 
-    data = []
+    data = ""
     for motor in motor_name:
-        data.append(event['data'][motor])
+        data = data + str((event['data'][motor])) + ' ' 
     return data
 
 
@@ -274,7 +274,7 @@ def to_spec_scan_data(start, primary_descriptor, event):
     md = {}
     md['unix_time'] = int(event['time'])
     md['acq_time'] = _get_acq_time(start)
-    md['motor_position'] = ' '.join([str(s) for s in _get_motor_position(start, event)])
+    md['motor_position'] = _get_motor_positions(start, event)
     data_keys = _get_scan_data_column_names(start, primary_descriptor)
     md['values'] = [event['data'][k] for k in data_keys]
     return _SPEC_EVENT_TEMPLATE.render(md)
