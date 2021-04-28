@@ -177,7 +177,7 @@ def _get_motor_positions(start, event):
     data = ""
     for motor in motor_name:
         data = data + str((event['data'][motor])) + ' '
-    return data
+    return data[:-1]
 
 
 def _get_scan_data_column_names(start, primary_descriptor):
