@@ -2,6 +2,12 @@
 Release History
 ===============
 
+
+Release 0.2.5 (2022-04-04)
+--------------------------
+
+- Corrected SPEC header formation from bluesky start doc
+
 Release 0.2.4 (2021-10-12)
 --------------------------
 
